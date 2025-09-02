@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weekly Training Log – 6 Months (Web App)</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- html2pdf (html2canvas + jsPDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      --card-radius: 1rem;
+    }
+    body { background: #0e0f13; }
+    .app-wrap { min-height: 100vh; }
+    .glass {
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--card-radius);
+    }
+    .brand-gradient {
+      background: linear-gradient(135deg,#6ea8fe,#a370f7,#63e6be);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .section-card { border-radius: var(--card-radius); }
+    .sticky-actions { position: sticky; top: .75rem; z-index: 5; }
+    .table thead th { position: sticky; top: 0; background: #12131a; }
+    .week-header { font-weight: 700; }
+    .cursor-pointer{cursor:pointer}
+    .login-card { max-width: 460px; }
+    .muted { color: #adb5bd; }
+    .content-card { background:#12131a; border:1px solid #222; }
+    .content-card .table { --bs-table-color: #dee2e6; --bs-table-striped-bg: #181a22; }
+    .form-check-input:checked { background-color:#7c4dff; border-color:#7c4dff; }
+    .btn-primary { background:#7c4dff; border-color:#7c4dff; }
+    .btn-primary:hover { background:#6b3eff; border-color:#6b3eff; }
+    .btn-outline-light { border-color:#444; }
+    .tag { border: 1px dashed #333; border-radius: 999px; padding: .125rem .5rem; font-size: .8rem; }
+    .divider { border-bottom:1px solid #2a2c36; }
+    .table td, .table th { vertical-align: middle; }
+  </style>
+</head>
+<body class="text-light">
+  <div class="container py-4 app-wrap">
+    <!-- NAV -->
+    <nav class="navbar navbar-dark navbar-expand-lg mb-4 glass px-3 py-2">
+      <a class="navbar-brand fw-bold" href="#">
+        <i class="bi bi-journal-check me-2"></i>
+        <span class="brand-gradient">Training Log</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="nav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link active" data-view="dashboard" href="#">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" data-view="weeks" href="#">Weekly Log</a></li>
+          <li class="nav-item"><a class="nav-link" data-view="data" href="#">Import / Export</a></li>
+        </ul>
+        <div class="d-flex align-items-center gap-2">
+          <span id="currentUser" class="small muted"></span>
+          <button id="btnLogout" class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- LOGIN / FIRST SETUP -->
+    <div id="authView" class="d-none d-flex justify-content-center align-items-start">
+      <div class="card login-card content-card p-3 w-100">
+        <div class="card-body">
+          <h1 class="h4 brand-gradient mb-3"><i class="bi bi-shield-lock me-2"></i>Sign in</h1>
+          <div id="firstSetupArea" class="d-none mb-3">
+            <div class="alert alert-warning" role="alert">
+              First-time setup: create your account and initial log period.
+            </div>
+          </div>
+          <form id="authForm" class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Username</label>
+              <input id="authUsername" class="form-control" placeholder="e.g., imesh" required />
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Password</label>
+              <input id="authPassword" type="password" class="form-control" required />
+            </div>
+
+            <div id="setupFields" class="row g-3 d-none mt-1">
+              <div class="col-12 col-sm-6">
+                <label class="form-label">Start date</label>
+                <input id="setupStart" type="date" class="form-control" />
+              </div>
+              <div class="col-12 col-sm-6">
+                <label class="form-label">Months</label>
+                <input id="setupMonths" type="number" min="1" max="12" value="6" class="form-control" />
+              </div>
+            </div>
+
+            <div class="col-12 d-flex gap-2 mt-2">
+              <button class="btn btn-primary" id="btnLogin"><i class="bi bi-door-open me-1"></i>Login</button>
+              <button type="button" class="btn btn-outline-light" id="btnCreate"><i class="bi bi-person-plus me-1"></i>Create account</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- APP VIEWS -->
+    <div id="appViews" class="d-none">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="mb-4">
+        <div class="row g-3">
+          <div class="col-12 col-lg-4">
+            <div class="content-card p-3 h-100">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h2 class="h5 m-0"><i class="bi bi-speedometer2 me-2"></i>Overview</h2>
+                <span class="tag" id="tagWeeks"></span>
+              </div>
+              <div class="divider my-2"></div>
+              <div class="small muted">Start</div>
+              <div id="metaStart" class="mb-2 fw-semibold"></div>
+              <div class="small muted">End</div>
+              <div id="metaEnd" class="fw-semibold"></div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-8">
+            <div class="content-card p-3 h-100">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h2 class="h5 m-0"><i class="bi bi-magic me-2"></i>Quick Actions</h2>
+                <div class="small text-secondary">Everything autosaves</div>
+              </div>
+              <div class="divider my-2"></div>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-primary" id="btnToday"><i class="bi bi-calendar-plus me-2"></i>Add Today’s Entry</button>
+                <button class="btn btn-outline-light" id="btnExportPDF"><i class="bi bi-filetype-pdf me-2"></i>Export PDF</button>
+                <button class="btn btn-outline-light" id="btnExportJSON"><i class="bi bi-filetype-json me-2"></i>Export JSON</button>
+                <label class="btn btn-outline-light mb-0" for="importFile"><i class="bi bi-upload me-2"></i>Import JSON</label>
+                <input type="file" id="importFile" accept="application/json" class="d-none" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- WEEKS -->
+      <section id="view-weeks" class="mb-4 d-none">
+        <div class="row g-3" id="weeksContainer"></div>
+      </section>
+
+      <!-- DATA -->
+      <section id="view-data" class="mb-4 d-none">
+        <div class="content-card p-3">
+          <h2 class="h5"><i class="bi bi-database me-2"></i>Data (JSON)</h2>
+          <div class="divider my-2"></div>
+          <pre id="jsonDump" class="bg-dark p-3 rounded" style="white-space:pre-wrap"></pre>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- TEMPLATES -->
+  <template id="tplWeek">
+    <div class="col-12">
+      <div class="content-card p-3 section-card">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="week-header h5 mb-0"></div>
+          <div class="small muted"></div>
+        </div>
+        <div class="table-responsive mt-3">
+          <table class="table table-dark table-striped align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width: 12rem;">Date</th>
+                <th style="width: 10rem;">Day</th>
+                <th>Brief Description of Work</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tplRow">
+    <tr>
+      <td class="date-cell"></td>
+      <td class="day-cell"></td>
+      <td>
+        <textarea class="form-control form-control-sm" rows="1" placeholder="What did you do?"></textarea>
+      </td>
+    </tr>
+  </template>
+
+  <!-- SCRIPTS -->
+  <script>
+    // ===== Utilities =====
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const fmt = (d) => d.toLocaleDateString(undefined,{year:'numeric',month:'2-digit',day:'2-digit'});
+    const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    const toISO = (d)=> d.toISOString().slice(0,10);
+
+    async function sha256(text){
+      const enc = new TextEncoder().encode(text);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+
+    function mondayOf(d){
+      const date = new Date(d);
+      const day = (date.getDay()+6)%7; // Mon=0
+      date.setDate(date.getDate()-day);
+      date.setHours(0,0,0,0);
+      return date;
+    }
+
+    function addDays(date, n){ const d = new Date(date); d.setDate(d.getDate()+n); return d; }
+
+    function buildWeeks(startDate, months){
+      const start = mondayOf(startDate);
+      const end = new Date(start);
+      end.setMonth(end.getMonth()+Number(months));
+      end.setHours(23,59,59,999);
+      // build weeks until we pass end
+      const weeks = [];
+      let w = 1, cursor = new Date(start);
+      while(cursor <= end){
+        const days = [];
+        for(let i=0;i<7;i++){
+          const d = addDays(cursor,i);
+          days.push({ date: toISO(d), day: dayNames[i], work: '' });
+        }
+        weeks.push({ number: w++, start: toISO(cursor), end: toISO(addDays(cursor,6)), days });
+        cursor = addDays(cursor,7);
+      }
+      return { start: toISO(start), end: weeks.at(-1).end, weeks };
+    }
+
+    // ===== Storage (localStorage JSON) =====
+    const KEY_PROFILE = 'tl_profile'; // {username, passhash}
+    const KEY_DATA = (u)=>`tl_data_${u}`; // {start,end,weeks:[{number,days:[{date,day,work}]}]}
+
+    const store = {
+      getProfile(){ return JSON.parse(localStorage.getItem(KEY_PROFILE)||'null'); },
+      setProfile(p){ localStorage.setItem(KEY_PROFILE, JSON.stringify(p)); },
+      getData(u){ return JSON.parse(localStorage.getItem(KEY_DATA(u))||'null'); },
+      setData(u,d){ localStorage.setItem(KEY_DATA(u), JSON.stringify(d)); },
+      clear(){ localStorage.clear(); }
+    };
+
+    // ===== Auth / Setup =====
+    let CURRENT_USER = null;
+
+    function showAuth(first=false){
+      $('#appViews').classList.add('d-none');
+      $('#authView').classList.remove('d-none');
+      $('#firstSetupArea').classList.toggle('d-none', !first);
+      $('#setupFields').classList.toggle('d-none', !first);
+      $('#btnLogin').textContent = first ? 'Create & Sign in' : 'Login';
+    }
+
+    function showApp(){
+      $('#authView').classList.add('d-none');
+      $('#appViews').classList.remove('d-none');
+    }
+
+    async function loginOrCreate(first){
+      const user = $('#authUsername').value.trim();
+      const pass = $('#authPassword').value;
+      if(!user || !pass){ alert('Enter username and password'); return; }
+      const hash = await sha256(pass);
+      const profile = store.getProfile();
+
+      if(first){
+        const start = $('#setupStart').value ? new Date($('#setupStart').value) : new Date();
+        const months = Number($('#setupMonths').value || 6);
+        const data = buildWeeks(start, months);
+        store.setProfile({ username:user, passhash:hash });
+        store.setData(user, { username:user, created: new Date().toISOString(), ...data });
+        CURRENT_USER = user;
+        initApp();
+        return;
+      }
+
+      if(!profile || profile.username !== user){
+        alert('User not found. Click "Create account".');
+        return;
+      }
+      if(profile.passhash !== hash){ alert('Invalid password'); return; }
+      CURRENT_USER = user;
+      initApp();
+    }
+
+    function logout(){ CURRENT_USER=null; location.reload(); }
+
+    // ===== Rendering =====
+    function renderOverview(meta){
+      $('#currentUser').textContent = meta.username ? `Signed in as ${meta.username}` : '';
+      $('#metaStart').textContent = fmt(new Date(meta.start));
+      $('#metaEnd').textContent = fmt(new Date(meta.end));
+      $('#tagWeeks').textContent = `${meta.weeks.length} weeks`;
+    }
+
+    function renderWeeks(meta){
+      const wrap = $('#weeksContainer');
+      wrap.innerHTML = '';
+      meta.weeks.forEach(week=>{
+        const card = document.importNode($('#tplWeek').content, true);
+        $('.week-header', card).textContent = `Week No. ${week.number} (Ending ${fmt(new Date(week.end))})`;
+        $('.muted', card).textContent = `${fmt(new Date(week.start))} – ${fmt(new Date(week.end))}`;
+        const tbody = $('tbody', card);
+        week.days.forEach((d, idx)=>{
+          const row = document.importNode($('#tplRow').content, true);
+          $('.date-cell', row).textContent = fmt(new Date(d.date));
+          $('.day-cell', row).textContent = d.day;
+          const ta = $('textarea', row);
+          ta.value = d.work || '';
+          ta.addEventListener('input', () => { d.work = ta.value; persist(); dumpJSON(); });
+          tbody.appendChild(row);
+        });
+        wrap.appendChild(card);
+      });
+    }
+
+    function persist(){
+      const data = window.__DATA__;
+      if(CURRENT_USER) store.setData(CURRENT_USER, data);
+    }
+
+    function dumpJSON(){
+      $('#jsonDump').textContent = JSON.stringify(window.__DATA__, null, 2);
+    }
+
+    function initApp(){
+      const data = store.getData(CURRENT_USER);
+      if(!data){ showAuth(true); return; }
+      window.__DATA__ = data;
+      renderOverview(data);
+      renderWeeks(data);
+      dumpJSON();
+      showApp();
+      setActiveView('dashboard');
+    }
+
+    // ===== Actions =====
+    function setActiveView(id){
+      $$('#nav a.nav-link').forEach(a=> a.classList.toggle('active', a.dataset.view===id));
+      ['dashboard','weeks','data'].forEach(v=> $('#view-'+v).classList.toggle('d-none', v!==id));
+    }
+
+    function addTodaysEntry(){
+      const today = new Date(); today.setHours(0,0,0,0);
+      const iso = toISO(today);
+      const data = window.__DATA__;
+      // find week containing today
+      const week = data.weeks.find(w => iso >= w.start && iso <= w.end);
+      if(!week){ alert('Today is outside your configured period.'); return; }
+      const idx = Math.min(6, Math.max(0, (today.getDay()+6)%7));
+      const d = week.days[idx];
+      // Focus the corresponding textarea
+      const cards = $$('#weeksContainer .content-card');
+      const target = cards[week.number-1];
+      if(target){
+        const rows = $$('tbody tr', target);
+        const ta = $('textarea', rows[idx]);
+        ta.focus();
+        ta.scrollIntoView({behavior:'smooth', block:'center'});
+      }
+    }
+
+    function exportJSON(){
+      const data = window.__DATA__;
+      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${data.username || 'training_log'}_${data.start}_to_${data.end}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importJSON(file){
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const obj = JSON.parse(reader.result);
+          if(!obj.weeks) throw new Error('Invalid JSON');
+          window.__DATA__ = obj;
+          store.setData(CURRENT_USER, obj);
+          renderOverview(obj); renderWeeks(obj); dumpJSON();
+          alert('Data imported successfully');
+        }catch(e){ alert('Import failed: '+e.message); }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportPDF(){
+      // Create a printable container clone to avoid interactive fields in PDF
+      const container = document.createElement('div');
+      container.style.padding = '16px';
+      container.style.color = '#111';
+      container.innerHTML = `
+        <h1 style="font-family:system-ui;margin:0 0 8px 0;">Weekly Training Log</h1>
+        <div style="margin-bottom:12px;font-size:12px;">User: ${(window.__DATA__.username||'')}
+        | Start: ${fmt(new Date(window.__DATA__.start))}
+        | End: ${fmt(new Date(window.__DATA__.end))}
+        | Weeks: ${window.__DATA__.weeks.length}</div>
+      `;
+
+      window.__DATA__.weeks.forEach(week=>{
+        const sec = document.createElement('section');
+        sec.style.pageBreakAfter = 'always';
+        sec.innerHTML = `
+          <h2 style="font-family:system-ui;font-size:14px;margin:0 0 6px 0;">Week No. ${week.number} – Ending ${fmt(new Date(week.end))}</h2>
+          <table border="1" cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse;font-family:system-ui;font-size:11px;">
+            <thead><tr><th style="text-align:left;width:22%">Date</th><th style="text-align:left;width:18%">Day</th><th style="text-align:left;">Brief Description of Work</th></tr></thead>
+            <tbody>
+              ${week.days.map(d=>`<tr><td>${fmt(new Date(d.date))}</td><td>${d.day}</td><td>${(d.work||'').replace(/</g,'&lt;')}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        `;
+        container.appendChild(sec);
+      });
+
+      const opt = { margin: 10, filename: `Training_Log_${window.__DATA__.start}_to_${window.__DATA__.end}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      html2pdf().set(opt).from(container).save();
+    }
+
+    // ===== Event wiring =====
+    document.addEventListener('click', (e)=>{
+      const link = e.target.closest('a.nav-link[data-view]');
+      if(link){ e.preventDefault(); setActiveView(link.dataset.view); }
+    });
+
+    $('#btnToday').addEventListener('click', addTodaysEntry);
+    $('#btnExportJSON').addEventListener('click', exportJSON);
+    $('#importFile').addEventListener('change', (e)=>{ if(e.target.files[0]) importJSON(e.target.files[0]); });
+    $('#btnExportPDF').addEventListener('click', exportPDF);
+    $('#btnLogout').addEventListener('click', logout);
+
+    // Auth buttons
+    $('#btnCreate').addEventListener('click', (e)=>{ e.preventDefault(); showAuth(true); });
+    $('#btnLogin').addEventListener('click', async (e)=>{
+      e.preventDefault();
+      const first = !store.getProfile() || !store.getData($('#authUsername').value.trim());
+      await loginOrCreate(first);
+    });
+
+    // On load: decide view
+    (function init(){
+      const profile = store.getProfile();
+      if(!profile){ showAuth(true); return; }
+      // profile exists – show login
+      showAuth(false);
+      // if logged in previously, attempt auto-login? keep explicit login for safety
+    })();
+
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
